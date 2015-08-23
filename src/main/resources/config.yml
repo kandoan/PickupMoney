@@ -1,0 +1,19 @@
+enableDrop: true
+particle:
+  enable: true
+  type: happyVillager
+  amount: 6
+sound:
+  enable: true
+  type: NOTE_PIANO
+  volumn: 2.0
+  pitch: 1.0
+item:
+  small:
+    type: GOLD_NUGGET
+    amount: 5
+  normal:
+    type: GOLD_INGOT
+    amount: 10
+  big:
+    type: GOLD_BLOCK
