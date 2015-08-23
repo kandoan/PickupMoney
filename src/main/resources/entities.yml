@@ -1,0 +1,10 @@
+CHICKEN:
+  enable: true
+  money: 1-5
+  amount: 1-2
+  chance: 100
+ZOMBIE:
+  enable: true
+  money: 10-20
+  amount: 2-3
+  chance: 100
