@@ -1,0 +1,10 @@
+GOLD_BLOCK  :
+  enable: true
+  money: 1-5
+  amount: 1-2
+  chance: 100
+DIAMOND_BLOCK :
+  enable: true
+  money: 10-20
+  amount: 2-3
+  chance: 100

@@ -1,29 +1,30 @@
 package com.gmail.vkhanh234.PickupMoney;
 
 import com.darkblade12.particleeffect.ParticleEffect;
+import com.gmail.vkhanh234.PickupMoney.Config.Blocks;
 import com.gmail.vkhanh234.PickupMoney.Config.Entities;
 import com.gmail.vkhanh234.PickupMoney.Config.Language;
-import net.milkbowl.vault.chat.Chat;
 import net.milkbowl.vault.economy.Economy;
-import org.bukkit.*;
+import org.bukkit.ChatColor;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.Sound;
+import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.*;
-import org.bukkit.event.Event;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Item;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.ItemMergeEvent;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.player.PlayerPickupItemEvent;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.util.Vector;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -33,6 +34,7 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 	public static Economy economy = null;
 	public Entities entities = new Entities(this);
 	public Language language = new Language(this);
+	public Blocks blocks = new Blocks(this);
 	String version = "1.0.0";
 	{
 		loadConfiguration();
@@ -119,7 +121,7 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 	}
 	@EventHandler
 	public void onDeath(EntityDeathEvent e){
-		if(fc.getBoolean("enableDrop")) {
+		if(fc.getBoolean("enableEntitiesDrop")) {
 			Entity entity = e.getEntity();
 			String name = entity.getType().toString();
 			if (entities.contain(name) && entities.getEnable(name) && KUtils.getSuccess(entities.getChance(name))) {
@@ -132,7 +134,21 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 			}
 		}
 	}
-
+	@EventHandler
+	public void onBreak(BlockBreakEvent e){
+		if(fc.getBoolean("enableBlocksDrop")) {
+			Block block = e.getBlock();
+			String name = block.getType().toString();
+			if (blocks.contain(name) && blocks.getEnable(name) && KUtils.getSuccess(blocks.getChance(name))) {
+				for (int i = 0; i < KUtils.getRandomInt(blocks.getAmount(name)); i++) {
+					spawnMoney(KUtils.getRandom(blocks.getMoney(name)), block.getLocation());
+					if (fc.getBoolean("particle.enable")) {
+						ParticleEffect.fromName(fc.getString("particle.type")).display((float) 0.5, (float) 0.5, (float) 0.5, 1, fc.getInt("particle.amount"), block.getLocation(), 20);
+					}
+				}
+			}
+		}
+	}
 	private String getMoney(String name) {
 		Pattern pattern = Pattern.compile("[0-9]+\\.[0-9][0-9]");
 		Matcher matcher = pattern.matcher(name);

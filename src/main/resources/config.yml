@@ -1,4 +1,5 @@
-enableDrop: true
+enableEntitiesDrop: true
+enableBlocksDrop: true
 particle:
   enable: true
   type: happyVillager
