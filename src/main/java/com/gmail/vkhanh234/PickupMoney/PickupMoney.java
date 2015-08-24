@@ -122,13 +122,15 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 	@EventHandler
 	public void onDeath(EntityDeathEvent e){
 		if(fc.getBoolean("enableEntitiesDrop")) {
-			Entity entity = e.getEntity();
-			String name = entity.getType().toString();
-			if (entities.contain(name) && entities.getEnable(name) && KUtils.getSuccess(entities.getChance(name))) {
-				for (int i = 0; i < KUtils.getRandomInt(entities.getAmount(name)); i++) {
-					spawnMoney(KUtils.getRandom(entities.getMoney(name)), entity.getLocation());
-					if (fc.getBoolean("particle.enable")) {
-						ParticleEffect.fromName(fc.getString("particle.type")).display((float) 0.5, (float) 0.5, (float) 0.5, 1, fc.getInt("particle.amount"), entity.getLocation(), 20);
+			if(e.getEntity().getKiller() instanceof Player) {
+				Entity entity = e.getEntity();
+				String name = entity.getType().toString();
+				if (entities.contain(name) && entities.getEnable(name) && KUtils.getSuccess(entities.getChance(name))) {
+					for (int i = 0; i < KUtils.getRandomInt(entities.getAmount(name)); i++) {
+						spawnMoney(KUtils.getRandom(entities.getMoney(name)), entity.getLocation());
+						if (fc.getBoolean("particle.enable")) {
+							ParticleEffect.fromName(fc.getString("particle.type")).display((float) 0.5, (float) 0.5, (float) 0.5, 1, fc.getInt("particle.amount"), entity.getLocation(), 20);
+						}
 					}
 				}
 			}
@@ -166,13 +168,13 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 	}
 	public ItemStack getItem(int money){
 		if(money<fc.getInt("item.small.amount")){
-			return new ItemStack(Material.getMaterial(fc.getString("item.small.type")));
+			return new ItemStack(Material.getMaterial(fc.getString("item.small.type")),1);
 		}
 		else if(money<fc.getInt("item.normal.amount")){
-			return new ItemStack(Material.getMaterial(fc.getString("item.normal.type")));
+			return new ItemStack(Material.getMaterial(fc.getString("item.normal.type")),1);
 		}
 		else{
-			return new ItemStack(Material.getMaterial(fc.getString("item.big.type")));
+			return new ItemStack(Material.getMaterial(fc.getString("item.big.type")),1);
 		}
 	}
 	private void loadConfiguration() {
