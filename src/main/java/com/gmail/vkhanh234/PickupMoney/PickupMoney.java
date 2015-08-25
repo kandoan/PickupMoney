@@ -35,7 +35,9 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 	public Entities entities = new Entities(this);
 	public Language language = new Language(this);
 	public Blocks blocks = new Blocks(this);
-	String version = "1.0.0";
+	String version = "1.2";
+	private String regex="[0-9]+\\.[0-9]+";
+
 	{
 		loadConfiguration();
 		initConfig();
@@ -95,7 +97,7 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 	public void onPickup(PlayerPickupItemEvent e){
 		Item item = e.getItem();
 		String name = item.getName();
-		if(language.get("nameSyntax").replace("{money}", "").equals(name.replaceAll("[0-9]+\\.[0-9][0-9]",""))){
+		if(language.get("nameSyntax").replace("{money}", "").equals(name.replaceAll(regex, ""))){
 			String money = getMoney(name);
 			Player p = e.getPlayer();
 			if(p.hasPermission("PickupMoney.pickup")) {
@@ -115,7 +117,7 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 	@EventHandler
 	public void onMerge(ItemMergeEvent e){
 		Item item = e.getEntity();
-		if(item.getCustomName()!=null && language.get("nameSyntax").replace("{money}", "").equals(item.getCustomName().replaceAll("[0-9]+\\.[0-9][0-9]",""))){
+		if(item.getCustomName()!=null && language.get("nameSyntax").replace("{money}", "").equals(item.getCustomName().replaceAll(regex,""))){
 			e.setCancelled(true);
 		}
 	}
@@ -126,12 +128,23 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 				Entity entity = e.getEntity();
 				String name = entity.getType().toString();
 				if (entities.contain(name) && entities.getEnable(name) && KUtils.getSuccess(entities.getChance(name))) {
-					for (int i = 0; i < KUtils.getRandomInt(entities.getAmount(name)); i++) {
-						spawnMoney(KUtils.getRandom(entities.getMoney(name)), entity.getLocation());
-						if (fc.getBoolean("particle.enable")) {
-							ParticleEffect.fromName(fc.getString("particle.type")).display((float) 0.5, (float) 0.5, (float) 0.5, 1, fc.getInt("particle.amount"), entity.getLocation(), 20);
+					if(entity instanceof Player) {
+						Player p = (Player) entity;
+						for (int i = 0; i < KUtils.getRandomInt(entities.getAmount(name)); i++) {
+							float money = getMoneyOfPlayer((Player) entity, entities.getMoney(name));
+							if(entities.getCost(name)){
+								costMoney(money,p);
+								p.sendMessage(language.get("dropOut").replace("{money}",String.valueOf(money)));
+							}
+							spawnMoney(money,entity.getLocation());
 						}
 					}
+					else{
+						for (int i = 0; i < KUtils.getRandomInt(entities.getAmount(name)); i++) {
+							spawnMoney(KUtils.getRandom(entities.getMoney(name)), entity.getLocation());
+						}
+					}
+					spawnParticle(entity.getLocation());
 				}
 			}
 		}
@@ -144,15 +157,21 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 			if (blocks.contain(name) && blocks.getEnable(name) && KUtils.getSuccess(blocks.getChance(name))) {
 				for (int i = 0; i < KUtils.getRandomInt(blocks.getAmount(name)); i++) {
 					spawnMoney(KUtils.getRandom(blocks.getMoney(name)), block.getLocation());
-					if (fc.getBoolean("particle.enable")) {
-						ParticleEffect.fromName(fc.getString("particle.type")).display((float) 0.5, (float) 0.5, (float) 0.5, 1, fc.getInt("particle.amount"), block.getLocation(), 20);
-					}
 				}
+				spawnParticle(block.getLocation());
 			}
 		}
 	}
+	private float getMoneyOfPlayer(Player p, String val){
+		if (val.contains("%")){
+			String s = val.replace("%","");
+			int percent = KUtils.getRandomInt(s);
+			return Double.valueOf(economy.getBalance(p)).floatValue()*percent/100;
+		}
+		else return KUtils.getRandom(val);
+	}
 	private String getMoney(String name) {
-		Pattern pattern = Pattern.compile("[0-9]+\\.[0-9][0-9]");
+		Pattern pattern = Pattern.compile(regex);
 		Matcher matcher = pattern.matcher(name);
 		if(matcher.find()) return matcher.group(0);
 		return "0";
@@ -161,10 +180,22 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 	private void giveMoney(float amount, Player p) {
 		economy.depositPlayer(p, amount);
 	}
+	private boolean costMoney(float amount, Player p){
+		if(economy.getBalance(p)>=amount){
+			economy.withdrawPlayer(p,amount);
+			return true;
+		}
+		return false;
+	}
 	public void spawnMoney(float money,Location l){
 			Item i = l.getWorld().dropItemNaturally(l, getItem(Float.valueOf(money).intValue()));
 			i.setCustomName(language.get("nameSyntax").replace("{money}", String.valueOf(money)));
 			i.setCustomNameVisible(true);
+	}
+	public void spawnParticle(Location l){
+		if (fc.getBoolean("particle.enable")) {
+			ParticleEffect.fromName(fc.getString("particle.type")).display((float) 0.5, (float) 0.5, (float) 0.5, 1, fc.getInt("particle.amount"), l, 20);
+		}
 	}
 	public ItemStack getItem(int money){
 		if(money<fc.getInt("item.small.amount")){

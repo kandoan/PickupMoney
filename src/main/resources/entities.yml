@@ -8,3 +8,9 @@ ZOMBIE:
   money: 10-20
   amount: 2-3
   chance: 100
+PLAYER:
+  enable: true
+  money: 10%
+  amount: 1
+  chance: 100
+  cost: true

@@ -1,3 +1,4 @@
 pickup: "You have received {money}$"
 reload: "Plugin has been reloaded!"
 nameSyntax: "{money}$"
+dropOut: "You have dropped {money}$"

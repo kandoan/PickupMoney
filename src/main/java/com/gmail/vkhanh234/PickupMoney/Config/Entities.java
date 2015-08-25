@@ -1,7 +1,6 @@
 package com.gmail.vkhanh234.PickupMoney.Config;
 
 import com.gmail.vkhanh234.PickupMoney.PickupMoney;
-import org.bukkit.Bukkit;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -48,10 +47,11 @@ public class Entities {
     public void load(){
         for(String k:config.getKeys(false)){
             EntityDat e = new EntityDat();
-            e.enable = config.getBoolean(k+".enable");
+            e.enable = config.getBoolean(k + ".enable");
             e.chance = config.getInt(k + ".chance");
             e.money = config.getString(k + ".money");
-            e.amount = config.getString(k+".amount");
+            e.amount = config.getString(k + ".amount");
+            e.cost = config.contains(k+".cost")? config.getBoolean(k + ".cost"):false;
             map.put(k,e);
         }
     }
@@ -71,8 +71,11 @@ public class Entities {
     public String getAmount(String name){
         return map.get(name).amount;
     }
+    public boolean getCost(String name){
+        return map.get(name).cost;
+    }
     class EntityDat{
-        boolean enable;
+        boolean enable,cost;
         int chance;
         String money,amount;
     }
