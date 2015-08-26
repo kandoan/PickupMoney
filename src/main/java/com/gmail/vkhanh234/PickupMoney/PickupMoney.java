@@ -4,6 +4,7 @@ import com.darkblade12.particleeffect.ParticleEffect;
 import com.gmail.vkhanh234.PickupMoney.Config.Blocks;
 import com.gmail.vkhanh234.PickupMoney.Config.Entities;
 import com.gmail.vkhanh234.PickupMoney.Config.Language;
+import com.gmail.vkhanh234.PickupMoney.Listener.MergeListener;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -21,15 +22,17 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
-import org.bukkit.event.entity.ItemMergeEvent;
 import org.bukkit.event.player.PlayerPickupItemEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URL;
-import java.util.Scanner;
+import java.net.URLConnection;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -42,7 +45,8 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 	String version = getDescription().getVersion();
 	ConsoleCommandSender console = getServer().getConsoleSender();
 	private String prefix = "[PickupMoney] ";
-	private String regex="[0-9]+\\.[0-9]+";
+	private boolean preVer = false;
+	public String regex="[0-9]+\\.[0-9]+";
 
 	{
 		loadConfiguration();
@@ -51,12 +55,14 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 	 @Override
 	 public void onEnable() {
 		 if (fc.getBoolean("notiUpdate")) {
-			 String vers = getNewestVersion();
 			 sendConsole(ChatColor.GREEN + "Current version: " + ChatColor.AQUA + version);
-			 sendConsole(ChatColor.GREEN + "Newest version: " + ChatColor.RED + vers);
-			 if (!vers.equals(version)) {
-				 sendConsole(ChatColor.RED + "There is a new version on Spigot!");
-				 sendConsole(ChatColor.RED + "https://www.spigotmc.org/resources/11334/");
+			 String vers = getNewestVersion();
+			 if (vers != null) {
+				 sendConsole(ChatColor.GREEN + "Newest version: " + ChatColor.RED + vers);
+				 if (!vers.equals(version)) {
+					 sendConsole(ChatColor.RED + "There is a new version on Spigot!");
+					 sendConsole(ChatColor.RED + "https://www.spigotmc.org/resources/11334/");
+				 }
 			 }
 		 }
 		 if(!getServer().getPluginManager().isPluginEnabled("Vault")){
@@ -65,7 +71,8 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 			 getServer().getPluginManager().disablePlugin(this);
 			 return;
 		 }
-		 if(Integer.parseInt(getServer().getBukkitVersion().split("\\.")[1])<8){
+		 String[] bukkver = getServer().getBukkitVersion().split("\\.");
+		 if(Integer.parseInt(bukkver[1].substring(0,1))<8){
 			 sendConsole("Server version is too old. Please update!");
 			 sendConsole("This plugin will be disabled.");
 			 getServer().getPluginManager().disablePlugin(this);
@@ -75,6 +82,13 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 			 getLogger().info(String.format("[%s] - Disabled due to no Vault dependency found!", getDescription().getName()));
 			 getServer().getPluginManager().disablePlugin(this);
 			 return;
+		 }
+		 try {
+			 Class.forName("org.bukkit.event.entity.ItemMergeEvent");
+			 getServer().getPluginManager().registerEvents(new MergeListener(this), this);
+		 } catch( ClassNotFoundException e ) {
+			 preVer = true;
+			 sendConsole(ChatColor.RED+"WARNING: Old Spigot version! Please update your Spigot for safe!");
 		 }
 		 getServer().getPluginManager().registerEvents(this, this);
 	 }
@@ -115,10 +129,10 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 		if(language.get("nameSyntax").replace("{money}", "").equals(name.replaceAll(regex, ""))){
 			String money = getMoney(name);
 			Player p = e.getPlayer();
+			e.setCancelled(true);
 			if(p.hasPermission("PickupMoney.pickup")) {
 				giveMoney(Float.parseFloat(money), p);
 				p.sendMessage(language.get("pickup").replace("{money}", money));
-				e.setCancelled(true);
 				item.remove();
 				if(fc.getBoolean("sound.enable")){
 					p.getLocation().getWorld().playSound(p.getLocation(), Sound.valueOf(fc.getString("sound.type"))
@@ -129,17 +143,11 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 		}
 	}
 
-	@EventHandler
-	public void onMerge(ItemMergeEvent e){
-		Item item = e.getEntity();
-		if(item.getCustomName()!=null && language.get("nameSyntax").replace("{money}", "").equals(item.getCustomName().replaceAll(regex,""))){
-			e.setCancelled(true);
-		}
-	}
+
 	@EventHandler
 	public void onDeath(EntityDeathEvent e){
 		if(fc.getBoolean("enableEntitiesDrop")) {
-			if(e.getEntity().getKiller() instanceof Player) {
+			if(e.getEntity().getKiller()!=null && e.getEntity().getKiller() instanceof Player) {
 				Entity entity = e.getEntity();
 				if (!checkWorld(entity.getLocation())) return;
 				String name = entity.getType().toString();
@@ -211,9 +219,11 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 		return false;
 	}
 	public void spawnMoney(float money,Location l){
-			Item i = l.getWorld().dropItemNaturally(l, getItem(Float.valueOf(money).intValue()));
-			i.setCustomName(language.get("nameSyntax").replace("{money}", String.valueOf(money)));
-			i.setCustomNameVisible(true);
+		Item item = l.getWorld().dropItemNaturally(l, getItem(Float.valueOf(money).intValue()));
+		String m = String.valueOf(money);
+		if (!m.contains(".")) m=m+".0";
+		item.setCustomName(language.get("nameSyntax").replace("{money}", m));
+		item.setCustomNameVisible(true);
 	}
 	public void spawnParticle(Location l){
 		if (fc.getBoolean("particle.enable")) {
@@ -255,14 +265,45 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 	}
 	private String getNewestVersion() {
 		try {
-			URL url = new URL("http://kickvn.tk/plugins/PickupMoney.txt");
-			Scanner s = new Scanner(url.openStream());
-			return s.next();
+			URL url = new URL("https://dl.dropboxusercontent.com/s/a890l19kn0fv32l/PickupMoney.txt");
+			URLConnection con = url.openConnection();
+			con.setConnectTimeout(2000);
+			con.setReadTimeout(1000);
+			InputStream in = con.getInputStream();
+			return getStringFromInputStream(in);
 		}
 		catch(IOException ex) {
-			sendConsole("Failed to check for update!");
+			sendConsole(ChatColor.RED+"Failed to check for update!");
 		}
 		return null;
+
+	}
+	private static String getStringFromInputStream(InputStream is) {
+
+		BufferedReader br = null;
+		StringBuilder sb = new StringBuilder();
+
+		String line;
+		try {
+
+			br = new BufferedReader(new InputStreamReader(is));
+			while ((line = br.readLine()) != null) {
+				sb.append(line);
+			}
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			if (br != null) {
+				try {
+					br.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+
+		return sb.toString();
 
 	}
 }
