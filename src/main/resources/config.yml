@@ -1,5 +1,6 @@
 enableEntitiesDrop: true
 enableBlocksDrop: true
+notiUpdate: true
 particle:
   enable: true
   type: happyVillager
@@ -18,3 +19,5 @@ item:
     amount: 10
   big:
     type: GOLD_BLOCK
+disableWorld:
+  - someworld

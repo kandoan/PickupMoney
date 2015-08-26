@@ -12,6 +12,7 @@ import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
@@ -26,6 +27,9 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.IOException;
+import java.net.URL;
+import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -35,7 +39,9 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 	public Entities entities = new Entities(this);
 	public Language language = new Language(this);
 	public Blocks blocks = new Blocks(this);
-	String version = "1.2";
+	String version = getDescription().getVersion();
+	ConsoleCommandSender console = getServer().getConsoleSender();
+	private String prefix = "[PickupMoney] ";
 	private String regex="[0-9]+\\.[0-9]+";
 
 	{
@@ -44,17 +50,24 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 	}
 	 @Override
 	 public void onEnable() {
-		 String ver = getServer().getBukkitVersion();
-		 if(Integer.parseInt(ver.split("\\.")[1])<8){
-			 getLogger().info("Server version is too old. Please update!");
-			 getLogger().info("This plugin will be disabled.");
+		 if (fc.getBoolean("notiUpdate")) {
+			 String vers = getNewestVersion();
+			 sendConsole(ChatColor.GREEN + "Current version: " + ChatColor.AQUA + version);
+			 sendConsole(ChatColor.GREEN + "Newest version: " + ChatColor.RED + vers);
+			 if (!vers.equals(version)) {
+				 sendConsole(ChatColor.RED + "There is a new version on Spigot!");
+				 sendConsole(ChatColor.RED + "https://www.spigotmc.org/resources/11334/");
+			 }
+		 }
+		 if(!getServer().getPluginManager().isPluginEnabled("Vault")){
+			 sendConsole("Vault is not installed or not enabled. ");
+			 sendConsole("This plugin will be disabled.");
 			 getServer().getPluginManager().disablePlugin(this);
 			 return;
 		 }
-
-		 if(!getServer().getPluginManager().isPluginEnabled("Vault")){
-			 getLogger().info("Vault is not installed or not enabled. ");
-			 getLogger().info("This plugin will be disabled.");
+		 if(Integer.parseInt(getServer().getBukkitVersion().split("\\.")[1])<8){
+			 sendConsole("Server version is too old. Please update!");
+			 sendConsole("This plugin will be disabled.");
 			 getServer().getPluginManager().disablePlugin(this);
 			 return;
 		 }
@@ -87,7 +100,9 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 			}
 		return true;
 	}
-
+	public void sendConsole(String s){
+		console.sendMessage(prefix+s);
+	}
 	private void showHelp(CommandSender sender) {
 		sender.sendMessage(ChatColor.RED+"PickupMoney version "+version);
 		sender.sendMessage(ChatColor.GREEN+"Reload - "+ ChatColor.AQUA+"/pickupmoney reload");
@@ -105,11 +120,11 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 				p.sendMessage(language.get("pickup").replace("{money}", money));
 				e.setCancelled(true);
 				item.remove();
-			}
-			if(fc.getBoolean("sound.enable")){
-				p.getLocation().getWorld().playSound(p.getLocation(), Sound.valueOf(fc.getString("sound.type"))
-						, (float) fc.getDouble("sound.volumn")
-						, (float) fc.getDouble("sound.pitch"));
+				if(fc.getBoolean("sound.enable")){
+					p.getLocation().getWorld().playSound(p.getLocation(), Sound.valueOf(fc.getString("sound.type"))
+							, (float) fc.getDouble("sound.volumn")
+							, (float) fc.getDouble("sound.pitch"));
+				}
 			}
 		}
 	}
@@ -126,6 +141,7 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 		if(fc.getBoolean("enableEntitiesDrop")) {
 			if(e.getEntity().getKiller() instanceof Player) {
 				Entity entity = e.getEntity();
+				if (!checkWorld(entity.getLocation())) return;
 				String name = entity.getType().toString();
 				if (entities.contain(name) && entities.getEnable(name) && KUtils.getSuccess(entities.getChance(name))) {
 					if(entity instanceof Player) {
@@ -149,10 +165,17 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 			}
 		}
 	}
+
+	private boolean checkWorld(Location location) {
+		if(fc.getList("disableWorld").contains(location.getWorld().getName())) return false;
+		return true;
+	}
+
 	@EventHandler
 	public void onBreak(BlockBreakEvent e){
 		if(fc.getBoolean("enableBlocksDrop")) {
 			Block block = e.getBlock();
+			if (!checkWorld(block.getLocation())) return;
 			String name = block.getType().toString();
 			if (blocks.contain(name) && blocks.getEnable(name) && KUtils.getSuccess(blocks.getChance(name))) {
 				for (int i = 0; i < KUtils.getRandomInt(blocks.getAmount(name)); i++) {
@@ -229,5 +252,17 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 	}
 	public static String getMessage(String type) {
 		return KUtils.convertColor(fc.getString("Message."+type));
+	}
+	private String getNewestVersion() {
+		try {
+			URL url = new URL("http://kickvn.tk/plugins/PickupMoney.txt");
+			Scanner s = new Scanner(url.openStream());
+			return s.next();
+		}
+		catch(IOException ex) {
+			sendConsole("Failed to check for update!");
+		}
+		return null;
+
 	}
 }

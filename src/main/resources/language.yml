@@ -1,4 +1,5 @@
 pickup: "You have received {money}$"
 reload: "Plugin has been reloaded!"
+noPermission: "You don't have permission!"
 nameSyntax: "{money}$"
 dropOut: "You have dropped {money}$"
