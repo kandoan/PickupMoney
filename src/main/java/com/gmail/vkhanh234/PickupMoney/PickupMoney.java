@@ -125,15 +125,15 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 	@EventHandler
 	public void onPickup(PlayerPickupItemEvent e){
 		Item item = e.getItem();
-		String name = item.getName();
-		if(language.get("nameSyntax").replace("{money}", "").equals(name.replaceAll(regex, ""))){
+		String name = item.getCustomName();
+		if(name!=null && language.get("nameSyntax").replace("{money}", "").equals(name.replaceAll(regex, ""))){
+			e.setCancelled(true);
 			String money = getMoney(name);
 			Player p = e.getPlayer();
-			e.setCancelled(true);
 			if(p.hasPermission("PickupMoney.pickup")) {
+				item.remove();
 				giveMoney(Float.parseFloat(money), p);
 				p.sendMessage(language.get("pickup").replace("{money}", money));
-				item.remove();
 				if(fc.getBoolean("sound.enable")){
 					p.getLocation().getWorld().playSound(p.getLocation(), Sound.valueOf(fc.getString("sound.type"))
 							, (float) fc.getDouble("sound.volumn")
