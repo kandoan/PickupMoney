@@ -4,7 +4,6 @@ import com.darkblade12.particleeffect.ParticleEffect;
 import com.gmail.vkhanh234.PickupMoney.Config.Blocks;
 import com.gmail.vkhanh234.PickupMoney.Config.Entities;
 import com.gmail.vkhanh234.PickupMoney.Config.Language;
-import com.gmail.vkhanh234.PickupMoney.Listener.MergeListener;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -24,6 +23,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.player.PlayerPickupItemEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -33,6 +33,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -83,13 +86,6 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 			 getServer().getPluginManager().disablePlugin(this);
 			 return;
 		 }
-		 try {
-			 Class.forName("org.bukkit.event.entity.ItemMergeEvent");
-			 getServer().getPluginManager().registerEvents(new MergeListener(this), this);
-		 } catch( ClassNotFoundException e ) {
-			 preVer = true;
-			 sendConsole(ChatColor.RED+"WARNING: Old Spigot version! Please update your Spigot for safe!");
-		 }
 		 getServer().getPluginManager().registerEvents(this, this);
 	 }
 
@@ -101,12 +97,33 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
 		if(!sender.hasPermission("PickupMoney.command")){
 			sender.sendMessage(language.get("noPermission"));
+			return true;
 		}
 			if (args.length >= 1) {
-				if (args[0].equals("reload")) {
-					reloadConfig();
-					initConfig();
-					sender.sendMessage(language.get("reload"));
+				try {
+					if (args[0].equals("reload") && sender.hasPermission("PickupMoney.admincmd")) {
+						reloadConfig();
+						initConfig();
+						sender.sendMessage(language.get("reload"));
+					}
+					else if (args[0].equals("drop") && sender instanceof Player && args.length == 2) {
+						Player p = (Player) sender;
+						float money = KUtils.getRandom(args[1]);
+						if(money<fc.getInt("minimumCmdDrop")){
+							p.sendMessage(language.get("miniumCmdDrop").replace("{money}",String.valueOf(fc.getInt("minimumCmdDrop"))));
+							return true;
+						}
+						Set<Material> set = null;
+						Block b = p.getTargetBlock(set, 6);
+						if (costMoney(money, p)) {
+							spawnMoney(money, b.getLocation());
+						} else {
+							p.sendMessage(language.get("noMoney"));
+						}
+					} else showHelp(sender);
+				}
+				catch (Exception e){
+					showHelp(sender);
 				}
 			}
 		else{
@@ -119,14 +136,15 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 	}
 	private void showHelp(CommandSender sender) {
 		sender.sendMessage(ChatColor.RED+"PickupMoney version "+version);
-		sender.sendMessage(ChatColor.GREEN+"Reload - "+ ChatColor.AQUA+"/pickupmoney reload");
+		if(sender.hasPermission("PickupMoney.admincmd")) sender.sendMessage(ChatColor.GREEN+"Reload - "+ ChatColor.AQUA+"/pickupmoney reload");
+		sender.sendMessage(ChatColor.GREEN+"Drop Money - "+ ChatColor.AQUA+"/pickupmoney drop <amount>");
 	}
 
 	@EventHandler
 	public void onPickup(PlayerPickupItemEvent e){
 		Item item = e.getItem();
-		String name = item.getCustomName();
-		if(name!=null && language.get("nameSyntax").replace("{money}", "").equals(name.replaceAll(regex, ""))){
+		String name = ChatColor.stripColor(item.getCustomName());
+		if(name!=null && ChatColor.stripColor(language.get("nameSyntax")).replace("{money}", "").equals(name.replaceAll(regex, ""))){
 			e.setCancelled(true);
 			String money = getMoney(name);
 			Player p = e.getPlayer();
@@ -231,15 +249,22 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 		}
 	}
 	public ItemStack getItem(int money){
+		ItemStack item;
 		if(money<fc.getInt("item.small.amount")){
-			return new ItemStack(Material.getMaterial(fc.getString("item.small.type")),1);
+			item = new ItemStack(Material.getMaterial(fc.getString("item.small.type")),1);
 		}
 		else if(money<fc.getInt("item.normal.amount")){
-			return new ItemStack(Material.getMaterial(fc.getString("item.normal.type")),1);
+			item =  new ItemStack(Material.getMaterial(fc.getString("item.normal.type")),1);
 		}
 		else{
-			return new ItemStack(Material.getMaterial(fc.getString("item.big.type")),1);
+			item =  new ItemStack(Material.getMaterial(fc.getString("item.big.type")),1);
 		}
+		ItemMeta meta = item.getItemMeta();
+		List<String> lore = new ArrayList<>();
+		lore.add(String.valueOf(KUtils.getRandomInt(1,100000000)));
+		meta.setLore(lore);
+		item.setItemMeta(meta);
+		return item;
 	}
 	private void loadConfiguration() {
 		getConfig().options().copyDefaults(true);
