@@ -147,21 +147,23 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 	@EventHandler
 	public void onPickup(PlayerPickupItemEvent e){
 		Item item = e.getItem();
-		String name = ChatColor.stripColor(item.getCustomName());
-		if(name!=null && ChatColor.stripColor(language.get("nameSyntax")).replace("{money}", "").equals(name.replaceAll(regex, ""))){
+		if(item.getCustomName()!=null) {
+			String name = ChatColor.stripColor(item.getCustomName());
+//		if(name!=null && ChatColor.stripColor(language.get("nameSyntax")).replace("{money}", "").equals(name.replaceAll(regex, ""))){
 			e.setCancelled(true);
 			String money = getMoney(name);
 			Player p = e.getPlayer();
-			if(p.hasPermission("PickupMoney.pickup")) {
+			if (p.hasPermission("PickupMoney.pickup")) {
 				item.remove();
 				giveMoney(Float.parseFloat(money), p);
 				p.sendMessage(language.get("pickup").replace("{money}", money));
-				if(fc.getBoolean("sound.enable")){
+				if (fc.getBoolean("sound.enable")) {
 					p.getLocation().getWorld().playSound(p.getLocation(), Sound.valueOf(fc.getString("sound.type"))
 							, (float) fc.getDouble("sound.volumn")
 							, (float) fc.getDouble("sound.pitch"));
 				}
 			}
+//		}
 		}
 	}
 
