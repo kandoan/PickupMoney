@@ -20,7 +20,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.inventory.InventoryPickupItemEvent;
 import org.bukkit.event.player.PlayerPickupItemEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -36,6 +38,7 @@ import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -49,6 +52,7 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 	ConsoleCommandSender console = getServer().getConsoleSender();
 	private String prefix = "[PickupMoney] ";
 	private boolean preVer = false;
+	private List<UUID> spawners = new ArrayList<>();
 	public String regex="[0-9]+\\.[0-9]+";
 
 	{
@@ -182,8 +186,10 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 						}
 					}
 					else{
+						int perc = 100;
+						if(spawners.contains(entity.getUniqueId())) perc = fc.getInt("spawnerPercent");
 						for (int i = 0; i < KUtils.getRandomInt(entities.getAmount(name)); i++) {
-							spawnMoney(KUtils.getRandom(entities.getMoney(name)), entity.getLocation());
+							spawnMoney(KUtils.getRandom(entities.getMoney(name))*perc/100, entity.getLocation());
 						}
 					}
 					spawnParticle(entity.getLocation());
@@ -209,6 +215,18 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 				}
 				spawnParticle(block.getLocation());
 			}
+		}
+	}
+	@EventHandler
+	public void onSpawner(CreatureSpawnEvent e){
+		if(e.getSpawnReason() == CreatureSpawnEvent.SpawnReason.SPAWNER){
+			spawners.add(e.getEntity().getUniqueId());
+		}
+	}
+	@EventHandler
+	public void onHopper(InventoryPickupItemEvent e){
+		if(e.getInventory().getType().toString().equalsIgnoreCase("hopper") && e.getItem().getCustomName()!=null){
+			e.setCancelled(true);
 		}
 	}
 	private float getMoneyOfPlayer(Player p, String val){

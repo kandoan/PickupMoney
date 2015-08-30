@@ -2,6 +2,7 @@ enableEntitiesDrop: true
 enableBlocksDrop: true
 notiUpdate: true
 minimumCmdDrop: 10
+spawnerPercent: 50
 particle:
   enable: true
   type: happyVillager

@@ -34,15 +34,6 @@ public class Entities {
             config.load(plugin.getResource("entities.yml"));
             config.save(configFile);
         }
-        else{
-            FileConfiguration c = YamlConfiguration.loadConfiguration(plugin.getResource("entities.yml"));
-            for(String k:c.getKeys(true)){
-                if(!config.contains(k)){
-                    config.set(k,c.get(k));
-                }
-            }
-            config.save(configFile);
-        }
     }
     public void load(){
         for(String k:config.getKeys(false)){
