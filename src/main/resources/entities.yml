@@ -14,3 +14,9 @@ PLAYER:
   amount: 1
   chance: 100
   cost: true
+#MythicMobs
+SkeletalMinion:
+  enable: true
+  money: 20-30
+  amount: 1-2
+  chance: 100

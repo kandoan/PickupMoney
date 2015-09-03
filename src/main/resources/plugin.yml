@@ -1,7 +1,7 @@
 name: PickupMoney
 main: com.gmail.vkhanh234.PickupMoney.PickupMoney
 author: KickVN
-version: 1.4.2
+version: 1.5
 softdepend: [Vault]
 commands:
    pickupmoney:

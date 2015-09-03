@@ -4,26 +4,20 @@ import com.darkblade12.particleeffect.ParticleEffect;
 import com.gmail.vkhanh234.PickupMoney.Config.Blocks;
 import com.gmail.vkhanh234.PickupMoney.Config.Entities;
 import com.gmail.vkhanh234.PickupMoney.Config.Language;
+import com.gmail.vkhanh234.PickupMoney.Listener.MainListener;
+import com.gmail.vkhanh234.PickupMoney.Listener.MythicMobsListener;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.entity.CreatureSpawnEvent;
-import org.bukkit.event.entity.EntityDeathEvent;
-import org.bukkit.event.inventory.InventoryPickupItemEvent;
-import org.bukkit.event.player.PlayerPickupItemEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.RegisteredServiceProvider;
@@ -52,7 +46,7 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 	ConsoleCommandSender console = getServer().getConsoleSender();
 	private String prefix = "[PickupMoney] ";
 	private boolean preVer = false;
-	private List<UUID> spawners = new ArrayList<>();
+	public List<UUID> spawners = new ArrayList<>();
 	public String regex="[0-9]+\\.[0-9]+";
 
 	{
@@ -65,7 +59,7 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 			 sendConsole(ChatColor.GREEN + "Current version: " + ChatColor.AQUA + version);
 			 String vers = getNewestVersion();
 			 if (vers != null) {
-				 sendConsole(ChatColor.GREEN + "Newest version: " + ChatColor.RED + vers);
+				 sendConsole(ChatColor.GREEN + "Latest version: " + ChatColor.RED + vers);
 				 if (!vers.equals(version)) {
 					 sendConsole(ChatColor.RED + "There is a new version on Spigot!");
 					 sendConsole(ChatColor.RED + "https://www.spigotmc.org/resources/11334/");
@@ -90,7 +84,12 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 			 getServer().getPluginManager().disablePlugin(this);
 			 return;
 		 }
-		 getServer().getPluginManager().registerEvents(this, this);
+		 getServer().getPluginManager().registerEvents(new MainListener(this), this);
+		 try{
+			 Class.forName("net.elseland.xikage.MythicMobs.API.Bukkit.Events.MythicMobDeathEvent");
+			 getServer().getPluginManager().registerEvents(new MythicMobsListener(this), this);
+		 } catch (ClassNotFoundException e) {
+		 }
 	 }
 
 	@Override
@@ -144,94 +143,8 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 		sender.sendMessage(ChatColor.GREEN+"Drop Money - "+ ChatColor.AQUA+"/pickupmoney drop <amount>");
 	}
 
-	@EventHandler
-	public void onPickup(PlayerPickupItemEvent e){
-		Item item = e.getItem();
-		if(item.getCustomName()!=null) {
-			String name = ChatColor.stripColor(item.getCustomName());
-//		if(name!=null && ChatColor.stripColor(language.get("nameSyntax")).replace("{money}", "").equals(name.replaceAll(regex, ""))){
-			e.setCancelled(true);
-			String money = getMoney(name);
-			Player p = e.getPlayer();
-			if (p.hasPermission("PickupMoney.pickup")) {
-				item.remove();
-				giveMoney(Float.parseFloat(money), p);
-				p.sendMessage(language.get("pickup").replace("{money}", money));
-				if (fc.getBoolean("sound.enable")) {
-					p.getLocation().getWorld().playSound(p.getLocation(), Sound.valueOf(fc.getString("sound.type"))
-							, (float) fc.getDouble("sound.volumn")
-							, (float) fc.getDouble("sound.pitch"));
-				}
-			}
-//		}
-		}
-	}
 
-
-	@EventHandler
-	public void onDeath(EntityDeathEvent e){
-		if(fc.getBoolean("enableEntitiesDrop")) {
-			if(e.getEntity().getKiller()!=null && e.getEntity().getKiller() instanceof Player) {
-				Entity entity = e.getEntity();
-				if (!checkWorld(entity.getLocation())) return;
-				String name = entity.getType().toString();
-				if (entities.contain(name) && entities.getEnable(name) && KUtils.getSuccess(entities.getChance(name))) {
-					if(entity instanceof Player) {
-						Player p = (Player) entity;
-						for (int i = 0; i < KUtils.getRandomInt(entities.getAmount(name)); i++) {
-							float money = getMoneyOfPlayer((Player) entity, entities.getMoney(name));
-							if(entities.getCost(name)){
-								costMoney(money,p);
-								p.sendMessage(language.get("dropOut").replace("{money}",String.valueOf(money)));
-							}
-							spawnMoney(money,entity.getLocation());
-						}
-					}
-					else{
-						int perc = 100;
-						if(spawners.contains(entity.getUniqueId())) perc = fc.getInt("spawnerPercent");
-						for (int i = 0; i < KUtils.getRandomInt(entities.getAmount(name)); i++) {
-							spawnMoney(KUtils.getRandom(entities.getMoney(name))*perc/100, entity.getLocation());
-						}
-					}
-					spawnParticle(entity.getLocation());
-				}
-			}
-		}
-	}
-
-	private boolean checkWorld(Location location) {
-		if(fc.getList("disableWorld").contains(location.getWorld().getName())) return false;
-		return true;
-	}
-
-	@EventHandler
-	public void onBreak(BlockBreakEvent e){
-		if(fc.getBoolean("enableBlocksDrop")) {
-			Block block = e.getBlock();
-			if (!checkWorld(block.getLocation())) return;
-			String name = block.getType().toString();
-			if (blocks.contain(name) && blocks.getEnable(name) && KUtils.getSuccess(blocks.getChance(name))) {
-				for (int i = 0; i < KUtils.getRandomInt(blocks.getAmount(name)); i++) {
-					spawnMoney(KUtils.getRandom(blocks.getMoney(name)), block.getLocation());
-				}
-				spawnParticle(block.getLocation());
-			}
-		}
-	}
-	@EventHandler
-	public void onSpawner(CreatureSpawnEvent e){
-		if(e.getSpawnReason() == CreatureSpawnEvent.SpawnReason.SPAWNER){
-			spawners.add(e.getEntity().getUniqueId());
-		}
-	}
-	@EventHandler
-	public void onHopper(InventoryPickupItemEvent e){
-		if(e.getInventory().getType().toString().equalsIgnoreCase("hopper") && e.getItem().getCustomName()!=null){
-			e.setCancelled(true);
-		}
-	}
-	private float getMoneyOfPlayer(Player p, String val){
+	public float getMoneyOfPlayer(Player p, String val){
 		if (val.contains("%")){
 			String s = val.replace("%","");
 			int percent = KUtils.getRandomInt(s);
@@ -239,17 +152,17 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 		}
 		else return KUtils.getRandom(val);
 	}
-	private String getMoney(String name) {
+	public String getMoney(String name) {
 		Pattern pattern = Pattern.compile(regex);
 		Matcher matcher = pattern.matcher(name);
 		if(matcher.find()) return matcher.group(0);
 		return "0";
 	}
 
-	private void giveMoney(float amount, Player p) {
+	public void giveMoney(float amount, Player p) {
 		economy.depositPlayer(p, amount);
 	}
-	private boolean costMoney(float amount, Player p){
+	public boolean costMoney(float amount, Player p){
 		if(economy.getBalance(p)>=amount){
 			economy.withdrawPlayer(p,amount);
 			return true;
@@ -267,6 +180,10 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 		if (fc.getBoolean("particle.enable")) {
 			ParticleEffect.fromName(fc.getString("particle.type")).display((float) 0.5, (float) 0.5, (float) 0.5, 1, fc.getInt("particle.amount"), l, 20);
 		}
+	}
+	public boolean checkWorld(Location location) {
+		if(fc.getList("disableWorld").contains(location.getWorld().getName())) return false;
+		return true;
 	}
 	public ItemStack getItem(int money){
 		ItemStack item;
