@@ -23,3 +23,4 @@ item:
     type: GOLD_BLOCK
 disableWorld:
   - someworld
+#example perm: PickupMoney.multiply.donator for x2

@@ -5,6 +5,7 @@ import com.gmail.vkhanh234.PickupMoney.Config.Blocks;
 import com.gmail.vkhanh234.PickupMoney.Config.Entities;
 import com.gmail.vkhanh234.PickupMoney.Config.Language;
 import com.gmail.vkhanh234.PickupMoney.Listener.MainListener;
+import com.gmail.vkhanh234.PickupMoney.Listener.MultiplierListener;
 import com.gmail.vkhanh234.PickupMoney.Listener.MythicMobsListener;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.ChatColor;
@@ -20,6 +21,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -29,10 +31,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -41,6 +40,8 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 	public static Economy economy = null;
 	public Entities entities = new Entities(this);
 	public Language language = new Language(this);
+	public HashMap<UUID,Integer> dropMulti = new HashMap<>();
+	public HashMap<UUID,Integer> pickupMulti = new HashMap<>();
 	public Blocks blocks = new Blocks(this);
 	String version = getDescription().getVersion();
 	ConsoleCommandSender console = getServer().getConsoleSender();
@@ -85,12 +86,20 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 			 return;
 		 }
 		 getServer().getPluginManager().registerEvents(new MainListener(this), this);
+		 getServer().getPluginManager().registerEvents(new MultiplierListener(this), this);
+		 loadMultipliers();
 		 try{
 			 Class.forName("net.elseland.xikage.MythicMobs.API.Bukkit.Events.MythicMobDeathEvent");
 			 getServer().getPluginManager().registerEvents(new MythicMobsListener(this), this);
 		 } catch (ClassNotFoundException e) {
 		 }
 	 }
+
+	private void loadMultipliers() {
+		for(Player p:getServer().getOnlinePlayers()){
+			loadMultiplier(p);
+		}
+	}
 
 	@Override
 	public void onDisable() {
@@ -119,7 +128,7 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 						Set<Material> set = null;
 						Block b = p.getTargetBlock(set, 6);
 						if (costMoney(money, p)) {
-							spawnMoney(money, b.getLocation());
+							spawnMoney(p,money, b.getLocation());
 						} else {
 							p.sendMessage(language.get("noMoney"));
 						}
@@ -133,6 +142,21 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 				showHelp(sender);
 			}
 		return true;
+	}
+	public void loadMultiplier(Player p){
+		int id=1,ip=1;
+		for (PermissionAttachmentInfo perms : p.getEffectivePermissions()) {
+			String perm = perms.getPermission();
+			if (perm.toLowerCase().startsWith("pickupmoney.multiply.")) {
+				String[] spl = perm.split("\\.");
+				int num = Integer.parseInt(spl[3]);
+				if(spl[2].equals("drop") && id<num) id = num;
+				else if(spl[2].equals("pickup") && ip<num) ip = num;
+			}
+		}
+		dropMulti.put(p.getUniqueId(),id);
+		pickupMulti.put(p.getUniqueId(),ip);
+
 	}
 	public void sendConsole(String s){
 		console.sendMessage(prefix+s);
@@ -169,7 +193,8 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 		}
 		return false;
 	}
-	public void spawnMoney(float money,Location l){
+	public void spawnMoney(Player p,float money,Location l){
+		if(dropMulti.containsKey(p.getUniqueId())) money*=dropMulti.get(p.getUniqueId());
 		Item item = l.getWorld().dropItemNaturally(l, getItem(Float.valueOf(money).intValue()));
 		String m = String.valueOf(money);
 		if (!m.contains(".")) m=m+".0";
@@ -198,7 +223,7 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 		}
 		ItemMeta meta = item.getItemMeta();
 		List<String> lore = new ArrayList<>();
-		lore.add(String.valueOf(KUtils.getRandomInt(1,100000000)));
+		lore.add(String.valueOf(KUtils.getRandomInt(1, 100000000)));
 		meta.setLore(lore);
 		item.setItemMeta(meta);
 		return item;

@@ -32,8 +32,10 @@ public class MainListener implements Listener {
             Player p = e.getPlayer();
             if (p.hasPermission("PickupMoney.pickup")) {
                 item.remove();
-                plugin.giveMoney(Float.parseFloat(money), p);
-                p.sendMessage(plugin.language.get("pickup").replace("{money}", money));
+                float amount = Float.parseFloat(money);
+                if(plugin.pickupMulti.containsKey(p.getUniqueId())) amount*=plugin.pickupMulti.get(p.getUniqueId());
+                plugin.giveMoney(amount, p);
+                p.sendMessage(plugin.language.get("pickup").replace("{money}", String.valueOf(amount)));
                 if (plugin.fc.getBoolean("sound.enable")) {
                     p.getLocation().getWorld().playSound(p.getLocation(), Sound.valueOf(plugin.fc.getString("sound.type"))
                             , (float) plugin.fc.getDouble("sound.volumn")
@@ -61,14 +63,14 @@ public class MainListener implements Listener {
                                 plugin.costMoney(money, p);
                                 p.sendMessage(plugin.language.get("dropOut").replace("{money}",String.valueOf(money)));
                             }
-                            plugin.spawnMoney(money, entity.getLocation());
+                            plugin.spawnMoney((Player) e.getEntity().getKiller(),money, entity.getLocation());
                         }
                     }
                     else{
                         int perc = 100;
                         if(plugin.spawners.contains(entity.getUniqueId())) perc = plugin.fc.getInt("spawnerPercent");
                         for (int i = 0; i < KUtils.getRandomInt(plugin.entities.getAmount(name)); i++) {
-                            plugin.spawnMoney(KUtils.getRandom(plugin.entities.getMoney(name)) * perc / 100, entity.getLocation());
+                            plugin.spawnMoney((Player) e.getEntity().getKiller(),KUtils.getRandom(plugin.entities.getMoney(name)) * perc / 100, entity.getLocation());
                         }
                     }
                     plugin.spawnParticle(entity.getLocation());
@@ -85,7 +87,7 @@ public class MainListener implements Listener {
             String name = block.getType().toString();
             if (plugin.blocks.contain(name) && plugin.blocks.getEnable(name) && KUtils.getSuccess(plugin.blocks.getChance(name))) {
                 for (int i = 0; i < KUtils.getRandomInt(plugin.blocks.getAmount(name)); i++) {
-                    plugin.spawnMoney(KUtils.getRandom(plugin.blocks.getMoney(name)), block.getLocation());
+                    plugin.spawnMoney(e.getPlayer(),KUtils.getRandom(plugin.blocks.getMoney(name)), block.getLocation());
                 }
                 plugin.spawnParticle(block.getLocation());
             }
