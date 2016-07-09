@@ -24,7 +24,7 @@ public class MythicMobsListener implements Listener {
                 String name = e.getMobType().getInternalName();
                 if (plugin.entities.contain(name) && plugin.entities.getEnable(name) && KUtils.getSuccess(plugin.entities.getChance(name))) {
                     for (int i = 0; i < KUtils.getRandomInt(plugin.entities.getAmount(name)); i++) {
-                        plugin.spawnMoney((Player) e.getEntity(),KUtils.getRandom(plugin.entities.getMoney(name)), entity.getLocation());
+                        plugin.spawnMoney(e.getEntity(),KUtils.getRandom(plugin.entities.getMoney(name)), entity.getLocation());
                     }
                     plugin.spawnParticle(entity.getLocation());
                 }

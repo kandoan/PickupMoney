@@ -9,6 +9,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
@@ -79,7 +80,7 @@ public class MainListener implements Listener {
         }
     }
 
-    @EventHandler
+	@EventHandler(priority=EventPriority.HIGHEST,ignoreCancelled=true)
     public void onBreak(BlockBreakEvent e){
         if(plugin.fc.getBoolean("enableBlocksDrop")) {
             Block block = e.getBlock();
@@ -87,7 +88,7 @@ public class MainListener implements Listener {
             String name = block.getType().toString();
             if (plugin.blocks.contain(name) && plugin.blocks.getEnable(name) && KUtils.getSuccess(plugin.blocks.getChance(name))) {
                 for (int i = 0; i < KUtils.getRandomInt(plugin.blocks.getAmount(name)); i++) {
-                    plugin.spawnMoney(e.getPlayer(),KUtils.getRandom(plugin.blocks.getMoney(name)), block.getLocation());
+                    plugin.spawnMoney(e.getPlayer(),KUtils.getRandom(plugin.blocks.getMoney(name)), block.getLocation().add(0.5F, 0.5F, 0.5F));
                 }
                 plugin.spawnParticle(block.getLocation());
             }

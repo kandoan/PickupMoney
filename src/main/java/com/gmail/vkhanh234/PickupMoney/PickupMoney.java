@@ -1,6 +1,6 @@
 package com.gmail.vkhanh234.PickupMoney;
 
-import com.darkblade12.particleeffect.ParticleEffect;
+//import com.darkblade12.particleeffect.ParticleEffect;
 import com.gmail.vkhanh234.PickupMoney.Config.Blocks;
 import com.gmail.vkhanh234.PickupMoney.Config.Entities;
 import com.gmail.vkhanh234.PickupMoney.Config.Language;
@@ -16,6 +16,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
@@ -73,13 +74,13 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 			 getServer().getPluginManager().disablePlugin(this);
 			 return;
 		 }
-		 String[] bukkver = getServer().getBukkitVersion().split("\\.");
-		 if(Integer.parseInt(bukkver[1].substring(0,1))<8){
-			 sendConsole("Server version is too old. Please update!");
+		 /*String[] bukkver = getServer().getBukkitVersion().split("\\.");
+		 if(Integer.parseInt(bukkver[1].substring(0,1))<7){
+			 sendConsole("Server version is too old (" + Integer.parseInt(bukkver[1].substring(0,1)) + "). Please update!");
 			 sendConsole("This plugin will be disabled.");
 			 getServer().getPluginManager().disablePlugin(this);
 			 return;
-		 }
+		 }*/
 		 if (!setupEconomy() ) {
 			 getLogger().info(String.format("[%s] - Disabled due to no Vault dependency found!", getDescription().getName()));
 			 getServer().getPluginManager().disablePlugin(this);
@@ -193,8 +194,8 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 		}
 		return false;
 	}
-	public void spawnMoney(Player p,float money,Location l){
-		if(dropMulti.containsKey(p.getUniqueId())) money*=dropMulti.get(p.getUniqueId());
+	public void spawnMoney(Entity entity,float money,Location l){
+		if(dropMulti.containsKey(entity.getUniqueId())) money*=dropMulti.get(entity.getUniqueId());
 		Item item = l.getWorld().dropItemNaturally(l, getItem(Float.valueOf(money).intValue()));
 		String m = String.valueOf(money);
 		if (!m.contains(".")) m=m+".0";
@@ -202,9 +203,9 @@ public final class PickupMoney extends JavaPlugin implements Listener {
 		item.setCustomNameVisible(true);
 	}
 	public void spawnParticle(Location l){
-		if (fc.getBoolean("particle.enable")) {
+		/*if (fc.getBoolean("particle.enable")) {
 			ParticleEffect.fromName(fc.getString("particle.type")).display((float) 0.5, (float) 0.5, (float) 0.5, 1, fc.getInt("particle.amount"), l, 20);
-		}
+		}*/
 	}
 	public boolean checkWorld(Location location) {
 		if(fc.getList("disableWorld").contains(location.getWorld().getName())) return false;

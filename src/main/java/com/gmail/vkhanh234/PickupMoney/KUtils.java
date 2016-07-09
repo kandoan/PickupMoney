@@ -26,9 +26,10 @@ public class KUtils {
     public static float getRandom(String level) {
         if(level.contains("-")){
             String[] spl = level.split("-");
-            return round(randomNumber(Integer.parseInt(spl[0]), Integer.parseInt(spl[1])),2);
+            
+            return round(randomNumber(Float.parseFloat(spl[0]), Float.parseFloat(spl[1])),2);
         }
-        else return Integer.parseInt(level);
+        else return Float.parseFloat(level);
     }
     public static int getRandomInt(String level) {
         if(level.contains("-")){
@@ -43,6 +44,13 @@ public class KUtils {
         return bd.floatValue();
     }
 
+
+    public static float randomNumber(float min,float max){
+        Random random = new Random();
+        float number = random.nextFloat()* (max - min) + min;
+        return random.nextFloat()* (max - min) + min;
+    }
+    
     public static float randomNumber(int min,int max){
         Random random = new Random();
         float number = random.nextFloat()* (max - min) + min;
@@ -63,9 +71,9 @@ public class KUtils {
         return false;
     }
     public static String backColor(String name) {
-        return name.replace("ยง","&");
+        return name.replace("ง","&");
     }
     public static String convertColor(String name){
-        return name.replace("&","ยง");
+        return name.replace("&","ง");
     }
 }
